@@ -1,0 +1,12 @@
+{
+    "name": "navac/qpi",
+    "type": "library",
+    "authors": [
+        {
+            "name": "MheMrg",
+            "email": "mhe_mrg@yahoo.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {}
+}
