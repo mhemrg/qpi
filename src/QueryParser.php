@@ -145,7 +145,9 @@ class Tree
    */
   public function addField()
   {
-    $this->fields[] = $this->field;
+    if(!empty($this->field)) {
+      $this->fields[$this->field] = '';
+    }
 
     $this->field  = '';
 
