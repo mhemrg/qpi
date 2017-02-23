@@ -1,9 +1,10 @@
 <?php
 namespace Navac\Qpi;
-require 'QueryParser.php';
 
-use Navac\Qpi\QueryParser;
+use Navac\Qpi\Support\Stack;
+use Navac\Qpi\Support\QueryParser;
 use App\Http\Controllers\Controller;
+use Facades\Navac\Qpi\Support\Parser;
 
 
 class QueryCtrl extends Controller
@@ -19,109 +20,72 @@ class QueryCtrl extends Controller
 
   public function parser($source)
   {
-    $Parser = new Parser();
+    $models = [];
+    $model_tmp = '';
+    Parser::newState('DetectingModel', '/^[A-Za-z0-9]/', [
+      Parser::newBreaker('/^\{/', function () use (&$model_tmp, &$models) {
+        $model = (object) [
+          'model' => $model_tmp,
+          'fields' => []
+        ];
 
-    $Parser->newState('DetectingModel', '/^[A-Za-z0-9]/', [
-      $Parser->newBreaker('/^\{/', 'Fields', function () { $this->addModel(); })
-    ], function ($token) {
-      $this->model .= $token;
-    });
-
-    $field = '';
-    $fields = [];
-    $Parser->newState('Fields', '/^[A-Za-z0-9_]/', [
-      $Parser->newBreaker('/^\,/', 'Fields', function () { $this->addField(); }),
-      $Parser->newBreaker('/^\}/', 'EndOfModel', function () { $this->addField()->addFields(); }),
-      $Parser->newBreaker('/^\{/', 'SubModel1', function () use (&$fields) {
-        $fields = [];
-        $this->addField();
+        array_push($models, $model);
+        $model_tmp = '';
+        return 'Fields';
       })
-    ], function ($token) {
-      $this->field .= $token;
-    });
+    ], function ($token) use (&$model_tmp) { $model_tmp .= $token; });
 
-    $Parser->newState('SubModel1', '/^[A-Za-z0-9_]/', [
-      $Parser->newBreaker('/^,/', 'SubModel1', function () use (&$fields, &$field) {
-        if(!array_key_exists($field, $fields)) {
-          $fields[$field] = '';
-        }
-        $field = '';
+    $FieldsStack = new Stack;
+    $field_tmp = '';
+    $addNewField = function () use (&$field_tmp, &$FieldsStack) {
+      $fields = &$FieldsStack->getLastItem();
+      if(!empty($field_tmp) && !array_key_exists($field_tmp, $fields)) {
+        $fields[$field_tmp] = '';
+        $field_tmp = '';
+      }
+      return 'Fields';
+    };
+    Parser::newState('Fields', '/^[A-Za-z0-9_]/', [
+      Parser::newBreaker('/^\,/', $addNewField),
+      Parser::newBreaker('/^\{/', function () use (&$addNewField, &$FieldsStack) {
+        call_user_func($addNewField);
+        $FieldsStack->push([]);
+        return 'Fields';
       }),
-      $Parser->newBreaker('/^\}/', 'Fields', function () use (&$fields, &$field) {
-        if(!array_key_exists($field, $fields) && !empty($field)) {
-          $fields[$field] = '';
-        }
-        $field = '';
+      Parser::newBreaker('/^\}/', function () use(&$FieldsStack, &$models, &$addNewField) {
+        call_user_func($addNewField);
 
-        end($this->fields);
-        $this->fields[key($this->fields)] = $fields;
-      }),
-      $Parser->newBreaker('/^\{/', 'SubModel2', function () use (&$fields2, &$fields, &$field) {
-        $fields2 = [];
-        $fields[$field] = '';
-      })
-    ], function ($token) use (&$field) {
-      $field .= $token;
-    });
+        if($FieldsStack->stackLength() === 1) {
+          $fields = &$FieldsStack->getLastItem();
 
-    $field2 = '';
-    $fields2 = [];
-    $Parser->newState('SubModel2', '/^[A-Za-z0-9_]/', [
-      $Parser->newBreaker('/^,/', 'SubModel2', function () use (&$fields2, &$field2) {
-        if(!array_key_exists($field2, $fields2)) {
-          $fields2[$field2] = '';
+          end($models);
+          $models[key($models)]->fields = $fields;
+
+          $FieldsStack->clean();
+
+          return 'DetectingModel';
         }
-        $field2 = '';
-      }),
-      $Parser->newBreaker('/^\}/', 'SubModel1', function () use (&$fields, &$fields2, &$field2) {
-        if(!array_key_exists($field2, $fields2) && !empty($field2)) {
-          $fields2[$field2] = '';
-        }
-        $field2 = '';
+
+        $poped_fields = $FieldsStack->pop();
+        $fields = &$FieldsStack->getLastItem();
 
         end($fields);
-        $fields[key($fields)] = $fields2;
-      }),
-      $Parser->newBreaker('/^\{/', 'SubModel3', function () use (&$fields3, &$fields2, &$field2) {
-        $fields3 = [];
-        $fields2[$field2] = '';
+        $fields[key($fields)] = $poped_fields;
+        return 'Fields';
       })
-    ], function ($token) use (&$field2) {
-      $field2 .= $token;
+    ], function ($token) use (&$field_tmp, &$FieldsStack) {
+      if($FieldsStack->isEmpty()) {
+        $FieldsStack->push([]);
+      }
+      $field_tmp .= $token;
     });
-
-    $field3 = '';
-    $fields3 = [];
-    $Parser->newState('SubModel3', '/^[A-Za-z0-9_]/', [
-      $Parser->newBreaker('/^,/', 'SubModel3', function () use (&$fields3, &$field3) {
-        if(!array_key_exists($field3, $fields3)) {
-          $fields3[$field3] = '';
-        }
-        $field3 = '';
-      }),
-      $Parser->newBreaker('/^\}/', 'SubModel2', function () use (&$fields2, &$fields3, &$field3) {
-        if(!array_key_exists($field3, $fields2) && !empty($field3)) {
-          $fields3[$field3] = '';
-        }
-        $field3 = '';
-
-        end($fields2);
-        $fields2[key($fields2)] = $fields3;
-      })
-    ], function ($token) use (&$field3) {
-      $field3 .= $token;
-    });
-
-    $Parser->newState('EndOfModel', '', [
-      $Parser->newBreaker('/^\,/', 'DetectingModel', function () { }),
-    ], function ($token) {});
 
     $i = 0;
     while ($i < strlen($source)) {
-      $Parser->setToken($source[$i]);
+      Parser::setToken($source[$i]);
       $i++;
     }
 
-    return $Parser->Tree->getTree();
+    return $models;
   }
 }
