@@ -13,13 +13,13 @@ class QueryCtrl extends Controller
 
   function index($query)
   {
-    // remove all whitespaces
-    $query = preg_replace('/[\s|\n]/', '', $query);
     return $this->parser($query);
   }
 
   public function parser($source)
   {
+    Parser::setSource($source);
+
     $models = [];
     $model_tmp = '';
     Parser::newState('DetectingModel', '/^[A-Za-z0-9]/', [

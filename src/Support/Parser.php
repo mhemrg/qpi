@@ -35,4 +35,10 @@ class Parser
   {
     return new Breaker($match, $handler);
   }
+
+  public function setSource($source)
+  {
+    $this->QueryParser->source = $source;
+    return $this;
+  }
 }
