@@ -26,7 +26,8 @@ class QueryCtrl extends Controller
       Parser::newBreaker('/^\{/', function () use (&$model_tmp, &$models) {
         $model = (object) [
           'model' => $model_tmp,
-          'fields' => []
+          'fields' => [],
+          'relations' => []
         ];
 
         array_push($models, $model);
@@ -35,48 +36,51 @@ class QueryCtrl extends Controller
       })
     ], function ($token) use (&$model_tmp) { $model_tmp .= $token; });
 
-    $FieldsStack = new Stack;
+    $fields = [];
     $field_tmp = '';
-    $addNewField = function () use (&$field_tmp, &$FieldsStack) {
-      $fields = &$FieldsStack->getLastItem();
+    $RelationsStack = new Stack;
+    $addNewField = function () use (&$field_tmp, &$RelationsStack) {
+      $fields = &$RelationsStack->getLastItem()['fields'];
       if(!empty($field_tmp) && !array_key_exists($field_tmp, $fields)) {
-        $fields[$field_tmp] = '';
+        array_push($fields, $field_tmp);
         $field_tmp = '';
       }
       return 'Fields';
     };
     Parser::newState('Fields', '/^[A-Za-z0-9_]/', [
       Parser::newBreaker('/^\,/', $addNewField),
-      Parser::newBreaker('/^\{/', function () use (&$addNewField, &$FieldsStack) {
-        call_user_func($addNewField);
-        $FieldsStack->push([]);
+      Parser::newBreaker('/^\{/', function () use(&$addNewField, &$RelationsStack, &$field_tmp, &$relations) {
+        $RelationsStack->push(['model' => $field_tmp, 'fields' => [], 'relations' => []]);
+        $field_tmp = '';
         return 'Fields';
       }),
-      Parser::newBreaker('/^\}/', function () use(&$FieldsStack, &$models, &$addNewField) {
+      Parser::newBreaker('/^\}/', function () use(&$addNewField, &$models, &$RelationsStack, &$relations, &$fields) {
         call_user_func($addNewField);
 
-        if($FieldsStack->stackLength() === 1) {
-          $fields = &$FieldsStack->getLastItem();
+        if($RelationsStack->stackLength() === 1) {
+          $fields = &$RelationsStack->getLastItem()['fields'];
+          $relations = &$RelationsStack->getLastItem()['relations'];
 
           end($models);
           $models[key($models)]->fields = $fields;
+          $models[key($models)]->relations = $relations;
 
-          $FieldsStack->clean();
+          $RelationsStack->clean();
 
           return 'DetectingModel';
         }
 
-        $poped_fields = $FieldsStack->pop();
-        $fields = &$FieldsStack->getLastItem();
-
-        end($fields);
-        $fields[key($fields)] = $poped_fields;
+        $poped_relation = $RelationsStack->pop();
+        $relations = &$RelationsStack->getLastItem()['relations'];
+        array_push($relations, $poped_relation);
+        
         return 'Fields';
       })
-    ], function ($token) use (&$field_tmp, &$FieldsStack) {
-      if($FieldsStack->isEmpty()) {
-        $FieldsStack->push([]);
+    ], function ($token) use (&$field_tmp, &$RelationsStack, &$relations) {
+      if($RelationsStack->isEmpty()) {
+        $RelationsStack->push(['fields' => [], 'relations' => []]);
       }
+
       $field_tmp .= $token;
     });
 
