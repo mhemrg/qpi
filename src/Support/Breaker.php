@@ -9,6 +9,8 @@ class Breaker
   public $match;
   public $handler;
 
+  protected $token;
+
   public function __construct($match = null, $handler = null)
   {
     $this->match = $match;
@@ -17,6 +19,7 @@ class Breaker
 
   public function matchToken($token)
   {
+    $this->token = $token;
     if(preg_match($this->match, $token)) {
       return true;
     }
@@ -25,7 +28,7 @@ class Breaker
 
   public function findCurState($states)
   {
-    $targetState = call_user_func($this->handler);
+    $targetState = call_user_func_array($this->handler, [$this->token]);
     return array_search($targetState, array_column($states, 'name'));
   }
 }

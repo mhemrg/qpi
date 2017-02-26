@@ -22,18 +22,32 @@ class QueryCtrl extends Controller
 
     $models = [];
     $model_tmp = '';
+    $addWhere = function () use (&$where, &$where_item_tmp) {
+      array_push($where, $where_item_tmp);
+      end($where);
+      $where[key($where)]['boolean'] = 'and';
+      return 'Where';
+    };
+    $addOrWhere = function () use (&$where, &$where_item_tmp) {
+      array_push($where, $where_item_tmp);
+      end($where);
+      $where[key($where)]['boolean'] = 'or';
+      return 'Where';
+    };
     Parser::newState('DetectingModel', '/^[A-Za-z0-9]/', [
       Parser::newBreaker('/^\{/', function () use (&$model_tmp, &$models) {
         $model = (object) [
           'model' => $model_tmp,
           'fields' => [],
-          'relations' => []
+          'relations' => [],
+          'where' => []
         ];
 
         array_push($models, $model);
         $model_tmp = '';
         return 'Fields';
-      })
+      }),
+      Parser::newBreaker('/^\[/', $addWhere)
     ], function ($token) use (&$model_tmp) { $model_tmp .= $token; });
 
     $fields = [];
@@ -73,7 +87,7 @@ class QueryCtrl extends Controller
         $poped_relation = $RelationsStack->pop();
         $relations = &$RelationsStack->getLastItem()['relations'];
         array_push($relations, $poped_relation);
-        
+
         return 'Fields';
       })
     ], function ($token) use (&$field_tmp, &$RelationsStack, &$relations) {
@@ -82,6 +96,32 @@ class QueryCtrl extends Controller
       }
 
       $field_tmp .= $token;
+    });
+
+    $where = [];
+    $where_item_tmp = ['column' => '', 'operator' => '', 'value' => '', 'boolean' => ''];
+    Parser::newState('Where', '/^[A-Za-z0-9_]/', [
+      Parser::newBreaker('/^[=!>~<]/', function ($token) use (&$where) {
+        end($where);
+        $where[key($where)]['operator'] .= $token;
+        return 'DetectingWhereValue';
+      })
+    ], function ($token) use (&$where) {
+      end($where);
+      $where[key($where)]['column'] .= $token;
+    });
+
+    Parser::newState('DetectingWhereValue', '/^[^\]|,]/', [
+      Parser::newBreaker('/^\,/', $addWhere),
+      Parser::newBreaker('/^\|/', $addOrWhere),
+      Parser::newBreaker('/^\]/', function () use (&$models, &$where) {
+        end($models);
+        $models[key($models)]->where = $where;
+        return 'DetectingModel';
+      }),
+    ], function ($token) use (&$where) {
+      end($where);
+      $where[key($where)]['value'] .= $token;
     });
 
     $i = 0;
