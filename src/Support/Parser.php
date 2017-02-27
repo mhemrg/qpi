@@ -7,7 +7,7 @@ use Navac\Qpi\Support\Breaker;
 use Navac\Qpi\Support\QueryParser;
 
 /**
- * Parser Fecade
+ * Parser
  */
 class Parser
 {

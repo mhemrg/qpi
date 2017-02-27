@@ -4,7 +4,7 @@ namespace Navac\Qpi;
 use Navac\Qpi\Support\Stack;
 use Navac\Qpi\Support\QueryParser;
 use App\Http\Controllers\Controller;
-use Facades\Navac\Qpi\Support\Parser;
+use Navac\Qpi\Support\ParserFacade as Parser;
 
 
 class QueryCtrl extends Controller
