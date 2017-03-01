@@ -105,6 +105,18 @@ class QueryCtrl extends Controller
     $where_item_tmp = ['column' => '', 'operator' => '', 'value' => '', 'boolean' => ''];
     Parser::newState('Where', '/^[A-Za-z0-9_]/', [
       Parser::newBreaker('/^[=!>~<]/', function ($token) use (&$where) {
+        switch ($token) {
+          case '~':
+            $token = 'like';
+            break;
+          case '!':
+            $token = '<>';
+            break;
+          default:
+            $token = $token;
+            break;
+        }
+
         end($where);
         $where[key($where)]['operator'] .= $token;
         return 'DetectingWhereValue';
@@ -120,6 +132,7 @@ class QueryCtrl extends Controller
       Parser::newBreaker('/^\]/', function () use (&$models, &$where) {
         end($models);
         $models[key($models)]['where'] = $where;
+        $where = [];
         return 'DetectingModel';
       }),
     ], function ($token) use (&$where) {
