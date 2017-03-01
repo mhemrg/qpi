@@ -1,7 +1,7 @@
 <?php
 namespace Navac\Qpi\Support;
 
-use Navac\Qpi\Support\ParserException;
+use Navac\Qpi\Support\ParserSyntaxException;
 
 class QueryParser
 {
@@ -56,42 +56,8 @@ class QueryParser
       if($this->matchToken()) {
         $this->states[$this->curState]['handler']($token);
       }
-    } catch (\Exception $e) {
-      $row = $this->debug['row'];
-      $col = $this->debug['col'];
-      $source = explode("\n", $this->source);
-
-      $output = [];
-      for ($i=0; $i < count($source); $i++) {
-        $line = $source[$i];
-
-        if($i === $row - 1) {
-          $line = "<div style='background: #fb2929; color: white'>{$line}</div>";
-
-          $helper = '';
-          for ($j=0; $j < $col - 1; $j++) {
-            $helper .= " ";
-          }
-          $helper .= '^';
-
-          $line .= "<div style='background: #fff1ac'>{$helper}</div>";
-        }
-
-        array_push($output, $line);
-      }
-      $output = implode("\n", $output);
-
-      exit(trim("
-      <p>
-      Line: {$row} | Column: {$col}
-      <br />
-      {$e->getMessage()}
-      </p>
-<hr />
-<pre>
-{$output}
-</pre>
-"));
+    } catch (ParserSyntaxException $e) {
+      throw new ParserSyntaxException($e->getMessage(), $this->debug);
     }
   }
 
@@ -132,7 +98,7 @@ class QueryParser
       return false;
     }
 
-    throw new \Exception("Unexpected token: {$this->token}");
+    throw new ParserSyntaxException("Unexpected token: {$this->token}");
   }
 
   protected function getStatePattern($state) {

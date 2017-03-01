@@ -4,6 +4,7 @@ namespace Navac\Qpi;
 use Navac\Qpi\Support\Stack;
 use Navac\Qpi\Support\QueryParser;
 use App\Http\Controllers\Controller;
+use Navac\Qpi\Support\ParserSyntaxException;
 use Navac\Qpi\Support\ParserFacade as Parser;
 
 
@@ -128,7 +129,17 @@ class QueryCtrl extends Controller
 
     $i = 0;
     while ($i < strlen($source)) {
-      Parser::setToken($source[$i]);
+      try {
+        Parser::setToken($source[$i]);
+
+      } catch (ParserSyntaxException $e) {
+        return view('qpi::syntax_error', [
+          'source' => $source,
+          'row' => $e->debug['row'],
+          'col' => $e->debug['col']
+        ]);
+      }
+
       $i++;
     }
 
