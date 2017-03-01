@@ -143,9 +143,9 @@ class QueryParser
     return $this->states[$state]['match'];
   }
 
-  public function addState($State)
+  public function addState($state)
   {
-    $this->states[] = $State->getState();
+    $this->states[] = $state;
     return $this;
   }
 

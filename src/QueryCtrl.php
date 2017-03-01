@@ -9,7 +9,6 @@ use Navac\Qpi\Support\ParserFacade as Parser;
 
 class QueryCtrl extends Controller
 {
-  public $tree = [];
 
   function index($query)
   {
@@ -36,7 +35,7 @@ class QueryCtrl extends Controller
     };
     Parser::newState('DetectingModel', '/^[A-Za-z0-9]/', [
       Parser::newBreaker('/^\{/', function () use (&$model_tmp, &$models) {
-        $model = (object) [
+        $model = [
           'model' => $model_tmp,
           'fields' => [],
           'relations' => [],
@@ -76,8 +75,8 @@ class QueryCtrl extends Controller
           $relations = &$RelationsStack->getLastItem()['relations'];
 
           end($models);
-          $models[key($models)]->fields = $fields;
-          $models[key($models)]->relations = $relations;
+          $models[key($models)]['fields'] = $fields;
+          $models[key($models)]['relations'] = $relations;
 
           $RelationsStack->clean();
 
@@ -116,7 +115,7 @@ class QueryCtrl extends Controller
       Parser::newBreaker('/^\|/', $addOrWhere),
       Parser::newBreaker('/^\]/', function () use (&$models, &$where) {
         end($models);
-        $models[key($models)]->where = $where;
+        $models[key($models)]['where'] = $where;
         return 'DetectingModel';
       }),
     ], function ($token) use (&$where) {
