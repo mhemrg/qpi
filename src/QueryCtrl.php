@@ -168,7 +168,9 @@ class QueryCtrl extends Controller
 
       $Fields = $combineFieldsAndRelations($model['fields'], $model['relations']);
 
-      $items = $Model->get()
+      $items = $this
+        ->addWhereClause($Model, $model['where'])
+        ->get()
         ->map(function($item) use($model, $Fields, $combineFieldsAndRelations) {
           foreach ($model['relations'] as $relation) {
             $relationName = $relation['model'];
@@ -200,5 +202,19 @@ class QueryCtrl extends Controller
     }
 
     return $output;
+  }
+
+  public function addWhereClause($Model, $clauses)
+  {
+    foreach ($clauses as $clause) {
+      if($clause['boolean'] === 'and') {
+        $Model = $Model->where($clause['column'], $clause['operator'], $clause['value']);
+
+      } else {
+        $Model = $Model->orWhere($clause['column'], $clause['operator'], $clause['value']);
+      }
+    }
+
+    return $Model;
   }
 }
