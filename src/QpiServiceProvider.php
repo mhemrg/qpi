@@ -6,6 +6,9 @@ class QpiServiceProvider extends ServiceProvider
 {
   public function boot()
   {
+    $this->publishes([
+        __DIR__.'/config.php' => config_path('qpi.php'),
+    ]);
   }
 
   public function register()

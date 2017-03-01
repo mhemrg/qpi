@@ -9,9 +9,12 @@ use Navac\Qpi\Support\ParserFacade as Parser;
 
 class QueryCtrl extends Controller
 {
+  protected $user_models;
 
   function index($query)
   {
+    $config = include config_path('qpi.php');
+    $this->user_models = $config['models'];
     return $this->parser($query);
   }
 
@@ -129,6 +132,62 @@ class QueryCtrl extends Controller
       $i++;
     }
 
-    return $models;
+    return $this->getData($models);
+  }
+
+  protected function getData($models)
+  {
+    $output = [];
+    foreach ($models as $model) {
+      $modelName = $model['model'];
+      if(!array_key_exists($modelName, $this->user_models)) {
+        continue;
+      }
+
+      $Model = new $this->user_models[$modelName];
+      $combineFieldsAndRelations = function($fields, $relations)
+      {
+        return array_merge(
+          $fields,
+          array_map(function($relation) {
+            return $relation['model'];
+          }, $relations)
+        );
+      };
+
+      $Fields = $combineFieldsAndRelations($model['fields'], $model['relations']);
+
+      $items = $Model->get()
+        ->map(function($item) use($model, $Fields, $combineFieldsAndRelations) {
+          foreach ($model['relations'] as $relation) {
+            $relationName = $relation['model'];
+            $item[$relationName] = $item->$relationName()->get();
+
+            $fieldsStack = new Stack;
+            $getRelations = function($item) use(&$relation, &$getRelations, &$fieldsStack, $combineFieldsAndRelations) {
+              $Fields = $combineFieldsAndRelations($relation['fields'], $relation['relations']);
+
+              $fieldsStack->push($Fields);
+
+              foreach ($relation['relations'] as $relation) {
+                $relationName = $relation['model'];
+                $item[$relationName] = $item->$relationName()->get();
+                $item[$relationName]->each($getRelations);
+              }
+
+              $item->setVisible($fieldsStack->pop());
+            };
+
+            $item[$relationName]->each($getRelations);
+          }
+
+          $item->setVisible($Fields);
+          return $item;
+        });
+
+      array_push($output, $items);
+    }
+
+    return $output;
   }
 }
