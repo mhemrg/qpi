@@ -67,7 +67,12 @@ class QueryCtrl extends Controller
     Parser::newState('Fields', '/^[A-Za-z0-9_]/', [
       Parser::newBreaker('/^\,/', $addNewField),
       Parser::newBreaker('/^\{/', function () use(&$addNewField, &$RelationsStack, &$field_tmp, &$relations) {
-        $RelationsStack->push(['model' => $field_tmp, 'fields' => [], 'relations' => []]);
+        $RelationsStack->push([
+          'model' => $field_tmp,
+          'fields' => [],
+          'relations' => [],
+          'where' => []
+        ]);
         $field_tmp = '';
         return 'Fields';
       }),
@@ -161,73 +166,79 @@ class QueryCtrl extends Controller
 
   protected function getData($models)
   {
-    $output = [];
-    foreach ($models as $model) {
-      $modelName = $model['model'];
-      if(!array_key_exists($modelName, $this->user_models)) {
-        continue;
+    function getFields($model) {
+      $model['fields'] = $model['fields'] === null ? [] : $model['fields'];
+      $model['relations'] = $model['relations'] === null ? [] : $model['relations'];
+
+      return array_merge(
+        $model['fields'],
+        array_map(function($relation) {
+          return $relation['model'];
+        }, $model['relations'])
+      );
+    }
+
+    function addWhereClause($Model, $clauses) {
+      foreach ($clauses as $clause) {
+        if($clause['boolean'] === 'and') {
+          $Model = $Model->where($clause['column'], $clause['operator'], $clause['value']);
+
+        } else {
+          $Model = $Model->orWhere($clause['column'], $clause['operator'], $clause['value']);
+        }
       }
 
-      $Model = new $this->user_models[$modelName];
-      $combineFieldsAndRelations = function($fields, $relations)
-      {
-        return array_merge(
-          $fields,
-          array_map(function($relation) {
-            return $relation['model'];
-          }, $relations)
-        );
-      };
+      return $Model;
+    }
 
-      $Fields = $combineFieldsAndRelations($model['fields'], $model['relations']);
+    function fetchRows($model, $userModels) {
+      $Model = new $userModels[$model['model']];
+      $Model = addWhereClause($Model, $model['where']);
 
-      $items = $this
-        ->addWhereClause($Model, $model['where'])
-        ->get()
-        ->map(function($item) use($model, $Fields, $combineFieldsAndRelations) {
-          foreach ($model['relations'] as $relation) {
-            $relationName = $relation['model'];
-            $item[$relationName] = $item->$relationName()->get();
+      return $Model->get()->map(function($row) use($model) {
+        $row->setVisible(getFields($model));
+        return $row;
+      });
+    }
 
-            $fieldsStack = new Stack;
-            $getRelations = function($item) use(&$relation, &$getRelations, &$fieldsStack, $combineFieldsAndRelations) {
-              $Fields = $combineFieldsAndRelations($relation['fields'], $relation['relations']);
+    function fetchRelations($rows, $relations) {
+      if(!$relations) { return $rows; }
 
-              $fieldsStack->push($Fields);
+      foreach ($relations as $relation) {
+        foreach ($rows as $row) {
+          fetchRelation($row, $relation);
+        }
+      }
 
-              foreach ($relation['relations'] as $relation) {
-                $relationName = $relation['model'];
-                $item[$relationName] = $item->$relationName()->get();
-                $item[$relationName]->each($getRelations);
-              }
+      return $rows;
+    }
 
-              $item->setVisible($fieldsStack->pop());
-            };
+    function fetchRelation($row, $relation) {
+      $relationName = $relation['model'];
 
-            $item[$relationName]->each($getRelations);
-          }
+      $row[$relationName] = $row->$relationName()->get();
+      $row[$relationName]->each(function($i) use($relation) {
+        $i->setVisible(getFields($relation));
+      });
 
-          $item->setVisible($Fields);
-          return $item;
-        });
+      return fetchRelations($row[$relationName], $relation['relations']);
+    }
 
-      array_push($output, $items);
+    function fetchModel($model, $userModels) {
+      return fetchRelations(
+        fetchRows($model, $userModels),
+        $model['relations']
+      );
+    }
+
+    $output = [];
+    foreach ($models as $model) {
+      array_push(
+        $output,
+        fetchModel($model, $this->user_models)
+      );
     }
 
     return $output;
-  }
-
-  public function addWhereClause($Model, $clauses)
-  {
-    foreach ($clauses as $clause) {
-      if($clause['boolean'] === 'and') {
-        $Model = $Model->where($clause['column'], $clause['operator'], $clause['value']);
-
-      } else {
-        $Model = $Model->orWhere($clause['column'], $clause['operator'], $clause['value']);
-      }
-    }
-
-    return $Model;
   }
 }
