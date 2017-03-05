@@ -247,6 +247,8 @@ class QueryCtrl extends Controller
 
   protected function getData($models)
   {
+    $rowsCount = 0;
+
     function getFields($model) {
       return array_merge(
         $model['fields'],
@@ -257,6 +259,8 @@ class QueryCtrl extends Controller
     }
 
     function addWhereClause($Model, $clauses) {
+      global $rowsCount;
+
       foreach ($clauses as $clause) {
         if($clause['boolean'] === 'and') {
           $Model = $Model->where($clause['column'], $clause['operator'], $clause['value']);
@@ -265,6 +269,8 @@ class QueryCtrl extends Controller
           $Model = $Model->orWhere($clause['column'], $clause['operator'], $clause['value']);
         }
       }
+
+      $rowsCount = $Model->count();
 
       return $Model;
     }
@@ -345,6 +351,7 @@ class QueryCtrl extends Controller
     }
 
     function fetchModel($model, $userModels) {
+      global $rowsCount;
       $rows = fetchRows($model, $userModels);
 
       if($rows['error']) {
@@ -352,7 +359,7 @@ class QueryCtrl extends Controller
       }
       return [
         'error' => false,
-        'count' => (new $userModels[$model['model']])->count(),
+        'count' => $rowsCount,
         'data' => fetchRelations($rows['data'], $model['relations'])
       ];
     }
