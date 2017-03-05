@@ -80,6 +80,7 @@ class QueryCtrl extends Controller
 
         if($detectingGroupBy) {
           array_push($groupBy, $field_tmp);
+          $detectingGroupBy = false;
         }
 
         $field_tmp = '';
@@ -247,9 +248,6 @@ class QueryCtrl extends Controller
   protected function getData($models)
   {
     function getFields($model) {
-      $model['fields'] = $model['fields'] === null ? [] : $model['fields'];
-      $model['relations'] = $model['relations'] === null ? [] : $model['relations'];
-
       return array_merge(
         $model['fields'],
         array_map(function($relation) {
@@ -271,6 +269,31 @@ class QueryCtrl extends Controller
       return $Model;
     }
 
+    function addQueryDetails($Model, $model) {
+      if(array_key_exists('offset', $model)) {
+        $offset = empty($model['offset']) ? 0 : $model['offset'];
+        $Model = $Model->offset($offset);
+      }
+
+      if(array_key_exists('limit', $model)) {
+        $limit = empty($model['limit']) ? 10 : $model['limit'];
+        $Model = $Model->limit($limit);
+      }
+
+      if(array_key_exists('orderBy', $model)) {
+        foreach ($model['orderBy'] as $col => $dir) {
+          $dir = $dir === 1 ? 'ASC' : 'DESC';
+          $Model = $Model->orderBy($col, $dir);
+        }
+      }
+
+      if(array_key_exists('groupBy', $model)) {
+        $Model = $Model->groupBy(...$model['groupBy']);
+      }
+
+      return $Model;
+    }
+
     function fetchRows($model, $userModels) {
       $Model = new $userModels[$model['model']];
 
@@ -284,10 +307,16 @@ class QueryCtrl extends Controller
       }
 
       $Model = addWhereClause($Model, $model['where']);
-      $data = $Model->get()->map(function($row) use($model) {
-        $row->setVisible(getFields($model));
-        return $row;
-      });
+      $Model = addQueryDetails($Model, $model);
+
+      try {
+        $data = $Model->get()->map(function($row) use($model) {
+          $row->setVisible(getFields($model));
+          return $row;
+        });
+      } catch (\Exception $e) {
+        return ['error' => true, 'data' => ['message' => $e->getMessage()]];
+      }
 
       return ['error' => false, 'data' => $data];
     }
@@ -323,6 +352,7 @@ class QueryCtrl extends Controller
       }
       return [
         'error' => false,
+        'count' => (new $userModels[$model['model']])->count(),
         'data' => fetchRelations($rows['data'], $model['relations'])
       ];
     }
