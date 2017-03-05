@@ -273,12 +273,23 @@ class QueryCtrl extends Controller
 
     function fetchRows($model, $userModels) {
       $Model = new $userModels[$model['model']];
-      $Model = addWhereClause($Model, $model['where']);
 
-      return $Model->get()->map(function($row) use($model) {
+      try {
+        if(method_exists($Model, 'qpiAccess')) {
+          $Model->qpiAccess();
+        }
+
+      } catch (\Exception $e) {
+        return ['error' => true, 'data' => ['message' => $e->getMessage()]];
+      }
+
+      $Model = addWhereClause($Model, $model['where']);
+      $data = $Model->get()->map(function($row) use($model) {
         $row->setVisible(getFields($model));
         return $row;
       });
+
+      return ['error' => false, 'data' => $data];
     }
 
     function fetchRelations($rows, $relations) {
@@ -305,10 +316,15 @@ class QueryCtrl extends Controller
     }
 
     function fetchModel($model, $userModels) {
-      return fetchRelations(
-        fetchRows($model, $userModels),
-        $model['relations']
-      );
+      $rows = fetchRows($model, $userModels);
+
+      if($rows['error']) {
+        return $rows;
+      }
+      return [
+        'error' => false,
+        'data' => fetchRelations($rows['data'], $model['relations'])
+      ];
     }
 
     $output = [];
