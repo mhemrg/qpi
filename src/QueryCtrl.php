@@ -14,6 +14,8 @@ class QueryCtrl extends Controller
 
   function index($query)
   {
+    \Event::fire('shop_event');
+
     $config = include config_path('qpi.php');
     $this->user_models = $config['models'];
     return $this->parser($query);

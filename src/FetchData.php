@@ -1,6 +1,8 @@
 <?php
 namespace Navac\Qpi;
 
+use Navac\Qpi\Support\PipeLine;
+
 /**
  * Fetches data from db based on passed query
  */
@@ -35,10 +37,14 @@ class FetchData
     if($rows['error']) {
       return $rows;
     }
+
+    $pipeline = new PipeLine;
+    $data = $pipeline->start($model['model'], $rows['data']);
+
     return [
       'error' => false,
       'count' => $this->rowsCount,
-      'data' => $this->fetchRelations($rows['data'], $model['relations'])
+      'data' => $this->fetchRelations($data, $model['relations'])
     ];
   }
 
@@ -138,12 +144,26 @@ class FetchData
   public function fetchRelation($row, $relation)
   {
     $relationName = $relation['model'];
-
     $row[$relationName] = $row->$relationName()->get();
+
+    $handler  = get_class($row->$relationName()->getRelated());
+    $hookName = $this->getHookByModelName($handler);
+    (new PipeLine)->start($hookName, $row[$relationName]);
+
     $row[$relationName]->each(function($i) use($relation) {
       $i->setVisible($this->getFields($relation));
     });
 
     return $this->fetchRelations($row[$relationName], $relation['relations']);
+  }
+
+  /**
+   * Finds handler in hooks list and returns it's hook-name
+   * @param  string $find_me
+   * @return string
+   */
+  public function getHookByModelName($modelName)
+  {
+    return array_search($modelName, $this->userModels);
   }
 }
