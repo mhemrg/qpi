@@ -2,6 +2,7 @@
 namespace Navac\Qpi\Syntax\Util;
 
 use Navac\Qpi\QueryCtrl;
+use Navac\Qpi\Support\PipeLine;
 use Navac\Qpi\Syntax\Util\Field;
 
 class Model
@@ -192,20 +193,32 @@ class Model
         $query = $row->$relationName();
         $query = $this->_addLimits($query, $relation);
 
-        $relationCols = $this->mapRelationFields(
-            $relationClassName,
-            $relation->filterModelCols()
-        );
+        $relationCols = $relation->filterModelCols();
 
-        $row[$relationName] = $query->select($relationCols)->get();
-        $row[$relationName]->each(function ($record) {
-            $record->setHidden(['pivot']);
+        $row[$relationName] = $this->_sendToPipeLine(
+            $this->_getHookByModelName($relationClassName),
+            $query->get()
+        );
+        $row[$relationName]->each(function ($record) use ($relationCols) {
+            $record->setVisible($relationCols);
         });
+
 
         return $this->_fetchRelations(
             $row[$relationName],
             $relation->filterRelations()
         );
+    }
+
+    /**
+     * Finds handler in hooks list and returns it's hook-name
+     *
+     * @param  string $modelClassName
+     * @return string
+     */
+    protected function _getHookByModelName($modelClassName)
+    {
+      return array_search($modelClassName, QueryCtrl::$userModels);
     }
 
     /**
@@ -265,6 +278,20 @@ class Model
         });
     }
 
+    /**
+     * Send rows to pipeline whitch it will call all the hooks of this model
+     * and allows them to modify rows
+     *
+     * @param  string $modelName
+     * @param  collection $rows
+     * @return collection Modified rows
+     */
+    protected function _sendToPipeLine($modelName, $rows)
+    {
+        $pipeline = new PipeLine;
+        return $pipeline->start($modelName, $rows);
+    }
+
     public function fetch()
     {
         if( ! $this->_isResourceExists()) {
@@ -281,7 +308,7 @@ class Model
             $query = $this->_addGroupBy($query);
             $query = $this->_addOrderBy($query);
 
-            $rows = $query->get();
+            $rows = $this->_sendToPipeLine($this->getName(), $query->get());
 
             $rows = $this->_fetchRelations(
                 $rows,
