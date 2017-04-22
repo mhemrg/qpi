@@ -23,6 +23,8 @@ class Model
      */
     public $isInGroupBy = false;
 
+    public $c = 0;
+
     public function __construct($name)
     {
         $this->_name = $name;
@@ -208,19 +210,39 @@ class Model
         );
     }
 
-    protected function _addWhereClause()
+    /**
+     * Add where clauses to query
+     *
+     * We have a tree of where clauses whitch they are in two types:
+     *  1) Basic
+     *  2) Nested
+     * So it first, detects whitch boolean (where or orWhere) should use
+     * and after that makes nested and basic queries.
+     *
+     * @param mixed $query
+     */
+    protected function _addWhereClause($query)
     {
-      foreach ($this->getWhereStats() as $clause) {
-        if($clause->boolean === '&') {
-            $this->_modelInstance = $this->_modelInstance->where(
-                $clause->col, $clause->operator, $clause->val
-            );
-        } else {
-            $this->_modelInstance = $this->_modelInstance->orWhere(
-                $clause->col, $clause->operator, $clause->val
-            );
+        function setStats($clauses, $query) {
+            foreach ($clauses as $clause) {
+                $method = $clause->boolean === '|' ? 'orWhere' : 'where';
+
+                if($clause->type === 'Nested') {
+                    $query = $query->$method(function($q) use($clause) {
+                        return setStats($clause->query, $q);
+                    });
+                }
+                else {
+                    $query = $query->$method(
+                        $clause->col, $clause->operator, $clause->val
+                    );
+                }
+            }
+
+            return $query;
         }
-      }
+
+        return setStats($this->getWhereStats(), $query);
     }
 
     protected function _addLimits($ins, $model)
@@ -260,8 +282,8 @@ class Model
         // try {
             // $this->_modelInstance->qpiAccess();
 
-            $this->_addWhereClause();
-            $query = $this->_addLimits($this->_modelInstance, $this);
+            $query = $this->_addWhereClause($this->_modelInstance);
+            $query = $this->_addLimits($query, $this);
             $query = $this->_addGroupBy($query);
             $query = $this->_addOrderBy($query);
 

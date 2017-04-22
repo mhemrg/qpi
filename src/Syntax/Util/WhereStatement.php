@@ -7,4 +7,6 @@ class WhereStatement
     public $col;
     public $operator;
     public $val;
+
+    public $type = 'Basic';
 }

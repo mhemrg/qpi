@@ -230,6 +230,16 @@ class QueryParser extends Parser
                     $this->peek();
                     break;
 
+                case 'T_PARENTHES_START':
+                    $this->peek();
+
+                    $whereStats[] = new WhereStatement();
+                    $stat = end($whereStats);
+                    $stat->type = 'Nested';
+                    $stat->boolean = $boolean;
+                    $stat->query = $this->parseWhereClause();
+                    break;
+
                 case 'T_IDENTIFIER':
                     $whereStats[] = new WhereStatement();
                     end($whereStats)->col = $curToken['match'];
@@ -257,6 +267,10 @@ class QueryParser extends Parser
                 case 'T_BRACKET_END':
                     $this->peek();
                     break;
+
+                case 'T_PARENTHES_END':
+                    $this->peek();
+                    return $whereStats;
 
                 default:
                     return $whereStats;
