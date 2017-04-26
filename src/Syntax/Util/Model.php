@@ -195,14 +195,15 @@ class Model
 
         $relationCols = $relation->filterModelCols();
 
-        $row[$relationName] = $this->_sendToPipeLine(
+        $rows = $this->_sendToPipeLine(
             $this->_getHookByModelName($relationClassName),
             $query->get()
         );
-        $row[$relationName]->each(function ($record) use ($relationCols) {
+        $rows->each(function ($record) use ($relationCols) {
             $record->setVisible($relationCols);
         });
 
+        $row[$relationName] = $this->_respondeOk($rows);
 
         return $this->_fetchRelations(
             $row[$relationName],
