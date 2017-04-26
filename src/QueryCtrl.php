@@ -15,8 +15,7 @@ class QueryCtrl extends Controller
 
     public function index($query)
     {
-        $config = include config_path('qpi.php');
-        self::$userModels = $config['models'];
+        self::$userModels = config('qpi.models');
 
         try {
             $tokens = Lexer::run($query);
