@@ -7,6 +7,7 @@ use Navac\Qpi\Syntax\ {
     Evaluator
 };
 use App\Http\Controllers\Controller;
+use Navac\Qpi\Support\ParserSyntaxException;
 
 class QueryCtrl extends Controller
 {
@@ -22,21 +23,15 @@ class QueryCtrl extends Controller
             $parseTree = (new QueryParser($tokens))->parse();
             $result = Evaluator::eval($parseTree);
 
-            return [
-                'ok' => true,
-                'data' => $result
-            ];
+            return $result;
 
-        } catch (\Exception $e) {
-            return $this->_respondError($e->getMessage());
+        } catch (ParserSyntaxException $e) {
+            return view('qpi::syntax_error', [
+                'source'  => $query,
+                'message' => $e->getMessage(),
+                'row' => $e->debug['row'],
+                'col' => $e->debug['col']
+            ]);
         }
-    }
-
-    protected function _respondError($msg='')
-    {
-        return [
-            'ok' => false,
-            'message' => $msg
-        ];
     }
 }

@@ -8,9 +8,12 @@ class ParserSyntaxException extends \Exception
 {
   public $debug;
 
-  public function __construct($message = "", $debug = null)
+  public function __construct($message = "", $token = null)
   {
-    $this->debug = $debug;
-    parent::__construct($message);
+      $this->debug = [
+          'row' => $token['line'],
+          'col' => $token['offset'] + 1,
+      ];
+      parent::__construct($message);
   }
 }

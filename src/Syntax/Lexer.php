@@ -1,6 +1,8 @@
 <?php
 namespace Navac\Qpi\Syntax;
 
+use Navac\Qpi\Support\ParserSyntaxException;
+
 /**
  * [$_terminals description]
  * @var [type]
@@ -50,7 +52,12 @@ class Lexer
             while ($offset < strlen($line)) {
                 $result = static::_match($line, $number, $offset);
                 if ($result === false) {
-                    throw new \Exception("Unable to parse line " . ($line+1) . ".");
+                    $debug = [
+                        'col' => $offset,
+                        'row' => $line
+                    ];
+
+                    throw new ParserSyntaxException("Unable to parse line " . ($line+1) . ".", $debug);
                 }
                 $tokens[] = $result;
                 $offset += strlen($result['match']);

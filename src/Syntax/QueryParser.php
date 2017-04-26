@@ -6,6 +6,7 @@ use Navac\Qpi\Syntax\Util\ {
     Field,
     WhereStatement
 };
+use Navac\Qpi\Support\ParserSyntaxException;
 
 class QueryParser extends Parser
 {
@@ -39,14 +40,17 @@ class QueryParser extends Parser
                     break;
 
                 default:
-                    throw new \Exception("In parse => Unexpected token: " . $curToken['match']);
+                    throw new ParserSyntaxException(
+                        "In parse => Unexpected token: " . $curToken['match'],
+                        $curToken
+                    );
                     break;
             }
         }
 
         switch ($this->_status) {
             case 'MODEL_BLOCK_STARTED':
-                throw new \Exception('Expected token: }');
+                throw new ParserSyntaxException('Expected token: }');
                 break;
 
             default:
@@ -83,7 +87,7 @@ class QueryParser extends Parser
                 case 'T_PARENTHES_START':
                     $expectedTokens = ['T_PARENTHES_START', 'T_DIGIT', 'T_COLON', 'T_DIGIT', 'T_PARENTHES_END'];
                     foreach($this->jumpTo(5) as $key => $token) {
-                        if($token['token'] !== $expectedTokens[$key]) throw new \Exception("In limits => Limits syntax is not currect.");
+                        if($token['token'] !== $expectedTokens[$key]) throw new ParserSyntaxException("In limits => Limits syntax is not currect.");
                     }
 
                     $limits = $this->parseLimits();
@@ -91,7 +95,7 @@ class QueryParser extends Parser
                     break;
 
                 case 'T_BLOCK_START':
-                    if(!$model) throw new \Exception("You have to identify your model.");
+                    if(!$model) throw new ParserSyntaxException("You have to identify your model.");
                     $this->peek();
                     break;
 
@@ -161,12 +165,12 @@ class QueryParser extends Parser
             $afterColon = $this->jumpTo(3)[2];
 
             if($afterColon['token'] !== 'T_DIGIT') {
-                throw new \Exception('Only T_DIGIT expected after orderBy colon.');
+                throw new ParserSyntaxException('Only T_DIGIT expected after orderBy colon.');
                 return;
             }
 
             if($afterColon['match'] !== 0 && $afterColon['match'] !== 1) {
-                throw new \Exception('Only 1 or 0 are acceptable for orderBy.');
+                throw new ParserSyntaxException('Only 1 or 0 are acceptable for orderBy.');
                 return;
             }
 

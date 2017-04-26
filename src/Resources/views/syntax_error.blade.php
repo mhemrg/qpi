@@ -14,6 +14,7 @@
     </style>
   </head>
   <body>
+      <h2>{{$message}}</h2>
     <pre>
     @php
       $source = explode("\n", $source);
