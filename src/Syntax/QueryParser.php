@@ -76,6 +76,12 @@ class QueryParser extends Parser
                     break;
 
                 case 'T_IDENTIFIER':
+                    // if the identifer is an aggregate function
+                    if($model && $this->nextToken()['token'] === 'T_PARENTHES_START') {
+                        $this->peek();
+                        continue;
+                    }
+
                     // if we does not have a model, so it is a model-identifier
                     if(!$model) { $model = new Model($curToken['match']); $this->peek(); }
                     // if we have a model, so this identifer is a field-identifier
@@ -85,13 +91,22 @@ class QueryParser extends Parser
 
                 // @TODO add ability to expect tokens when limit or offset does not exsists
                 case 'T_PARENTHES_START':
-                    $expectedTokens = ['T_PARENTHES_START', 'T_DIGIT', 'T_COLON', 'T_DIGIT', 'T_PARENTHES_END'];
-                    foreach($this->jumpTo(5) as $key => $token) {
-                        if($token['token'] !== $expectedTokens[$key]) throw new ParserSyntaxException("In limits => Limits syntax is not currect.");
+                    // $expectedTokens = ['T_PARENTHES_START', 'T_DIGIT', 'T_COLON', 'T_DIGIT', 'T_PARENTHES_END'];
+                    // foreach($this->jumpTo(5) as $key => $token) {
+                    //     if($token['token'] !== $expectedTokens[$key]) throw new ParserSyntaxException("In limits => Limits syntax is not currect.");
+                    // }
+                    if($this->nextToken()['token'] === 'T_DIGIT') {
+                        $limits = $this->parseLimits();
+                        $model->setLimits($limits['offset'], $limits['limit']);
+                    }
+                    else if($this->nextToken()['token'] === 'T_IDENTIFIER') {
+                        $model->aggregate = $this->prevToken()['match'];
+                        $this->peek();
+                    }
+                    else {
+                        throw new ParserSyntaxException("After token T_PARENTHES_START, you just can pass T_DIGIT or T_IDENTIFIER tokens.");
                     }
 
-                    $limits = $this->parseLimits();
-                    $model->setLimits($limits['offset'], $limits['limit']);
                     break;
 
                 case 'T_BLOCK_START':
@@ -101,6 +116,10 @@ class QueryParser extends Parser
 
                 case 'T_BLOCK_END':
                     $modelParseComplete = true;
+                    break;
+
+                case 'T_PARENTHES_END':
+                    $this->peek();
                     break;
 
                 default:

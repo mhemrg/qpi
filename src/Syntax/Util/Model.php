@@ -17,6 +17,12 @@ class Model
     protected $_modelInstance;
 
     /**
+     * Is there any aggregate function on this model?
+     * @var  The name of the aggregate function
+     */
+    public $aggregate;
+
+    /**
      * Is this field must be in group by list?
      *
      * @note This property always is false for models.
@@ -203,6 +209,11 @@ class Model
             $record->setVisible($relationCols);
         });
 
+        if( ! is_null($relation->aggregate)) {
+            $aggregate = $relation->aggregate;
+            $rows = $rows->$aggregate($relationCols[0]);
+        }
+
         $row[$relationName] = $this->_respondeOk($rows);
 
         return $this->_fetchRelations(
@@ -302,8 +313,9 @@ class Model
         $this->_makeInstance();
 
 
-        // try {
+        try {
             // $this->_modelInstance->qpiAccess();
+
             $query = $this->_addWhereClause($this->getWhereStats(), $this->_modelInstance);
             $query = $this->_addLimits($query, $this);
             $query = $this->_addGroupBy($query);
@@ -318,11 +330,18 @@ class Model
 
             $rows = $this->setVisibleCols($rows);
 
+            if( ! is_null($this->aggregate)) {
+                $aggregate = $this->aggregate;
+                $rows = $rows->$aggregate($this->getFields()[0]);
+            }
+
             return $this->_respondeOk($rows);
-
-        // } catch (\Exception $e) {
-        //     return $this->_respondError($e->getMessage());
-        // }
-
+        }
+        catch (\BadMethodCallException $e) {
+            return $this->_respondError($e->getMessage());
+        }
+        catch (\Exception $e) {
+            return $this->_respondError($e->getMessage());
+        }
     }
 }
