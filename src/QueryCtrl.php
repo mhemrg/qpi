@@ -33,4 +33,26 @@ class QueryCtrl extends Controller
             ]);
         }
     }
+
+    public function schema($output='json')
+    {
+        $models = config('qpi.models');
+        $info = [];
+
+        foreach ($models as $modelAlias => $model) {
+            array_push($info, [
+                'name' => $modelAlias,
+                'props' => $model::$qpiProps,
+                'relations' => $model::$qpiRelations
+            ]);
+        }
+
+        if($output === 'html') {
+            return view('qpi::schema', [
+                'info' => $info
+            ]);
+        }
+
+        return ['models' => $info];
+    }
 }
