@@ -199,8 +199,10 @@ class Model
         $relationTableName = $relationClass->getTable();
 
         $query = $row->$relationName();
-        $query = $this->_addWhereClause(
-            $relation->getWhereStats(), $query, $relationTableName);
+        $query = $query->where(function ($query) use ($relation, $relationTableName) {
+            return $relation->_addWhereClause($query, $relationTableName);
+        });
+
         $query = $this->_addLimits($query, $relation);
         $query = $relation->_addGroupBy($query);
         $query = $relation->_addOrderBy($query);
@@ -247,16 +249,15 @@ class Model
      * So it first, detects whitch boolean (where or orWhere) should use
      * and after that makes nested and basic queries.
      *
-     * @param array $clauses
      * @param mixed $query
      * @param mixed $prefix A prefix to add before the fields, it must be
      *                      the name of the table.
      * @return mixed $query
      */
-    protected function _addWhereClause($clauses, $query, $prefix='')
+    protected function _addWhereClause($query, $prefix='')
     {
         $prefix = $prefix . '.';
-        foreach ($clauses as $clause) {
+        foreach ($this->getWhereStats() as $clause) {
             $method = $clause->boolean === '|' ? 'orWhere' : 'where';
 
             if($clause->type === 'Nested') {
@@ -325,7 +326,8 @@ class Model
         try {
             // $this->_modelInstance->qpiAccess();
 
-            $query = $this->_addWhereClause($this->getWhereStats(), $this->_modelInstance);
+            $query = $this->_modelInstance;
+            $query = $this->_addWhereClause($query);
             $query = $this->_addLimits($query, $this);
             $query = $this->_addGroupBy($query);
             $query = $this->_addOrderBy($query);
