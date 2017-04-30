@@ -144,7 +144,7 @@ class Model
      * @param  array $fields
      * @return array
      */
-    public function mapRelationFields($className, $fields)
+    public function addTableNameAsPrefix($className, $fields)
     {
         $relationTableName = (new $className)->getTable();
 
@@ -165,7 +165,7 @@ class Model
         });
 
         if(count($cols) > 0) {
-            $query = $query->groupBy(...$cols);
+            $query = $query->groupBy($cols);
         }
 
         return $query;
@@ -194,10 +194,16 @@ class Model
     public function _fetchRelation($row, $relation)
     {
         $relationName = $relation->getName();
-        $relationClassName = get_class($row->$relationName()->getRelated());
+        $relationClass = $row->$relationName()->getRelated();
+        $relationClassName = get_class($relationClass);
+        $relationTableName = $relationClass->getTable();
 
         $query = $row->$relationName();
+        $query = $this->_addWhereClause(
+            $relation->getWhereStats(), $query, $relationTableName);
         $query = $this->_addLimits($query, $relation);
+        $query = $relation->_addGroupBy($query);
+        $query = $relation->_addOrderBy($query);
 
         $relationCols = $relation->filterModelCols();
 
@@ -205,9 +211,8 @@ class Model
             $this->_getHookByModelName($relationClassName),
             $query->get()
         );
-        $rows->each(function ($record) use ($relationCols) {
-            $record->setVisible($relationCols);
-        });
+
+        $rows = $this->setVisibleCols($rows, $relation);
 
         if( ! is_null($relation->aggregate)) {
             $aggregate = $relation->aggregate;
@@ -217,7 +222,7 @@ class Model
         $row[$relationName] = $this->_respondeOk($rows);
 
         return $this->_fetchRelations(
-            $row[$relationName],
+            $row[$relationName]['result'],
             $relation->filterRelations()
         );
     }
@@ -242,11 +247,15 @@ class Model
      * So it first, detects whitch boolean (where or orWhere) should use
      * and after that makes nested and basic queries.
      *
+     * @param array $clauses
      * @param mixed $query
+     * @param mixed $prefix A prefix to add before the fields, it must be
+     *                      the name of the table.
      * @return mixed $query
      */
-    protected function _addWhereClause($clauses, $query)
+    protected function _addWhereClause($clauses, $query, $prefix='')
     {
+        $prefix = $prefix . '.';
         foreach ($clauses as $clause) {
             $method = $clause->boolean === '|' ? 'orWhere' : 'where';
 
@@ -257,7 +266,7 @@ class Model
             }
             else {
                 $query = $query->$method(
-                    $clause->col, $clause->operator, $clause->val
+                    $prefix.$clause->col, $clause->operator, $clause->val
                 );
             }
         }
@@ -276,16 +285,16 @@ class Model
      * Whitch columns should be visible?
      *
      */
-    public function setVisibleCols($rows)
+    public function setVisibleCols($rows, $model)
     {
-        return $rows->map(function ($row) {
+        return $rows->map(function ($row) use($model) {
             return $row->setVisible(array_merge(
-                $this->filterModelCols(),
+                $model->filterModelCols(),
 
                 // Map through relations and get their name as a field
                 array_map(function ($field) {
                     return $field->_name;
-                }, $this->filterRelations())
+                }, $model->filterRelations())
             ));
         });
     }
@@ -328,7 +337,7 @@ class Model
                 $this->filterRelations()
             );
 
-            $rows = $this->setVisibleCols($rows);
+            $rows = $this->setVisibleCols($rows, $this);
 
             if( ! is_null($this->aggregate)) {
                 $aggregate = $this->aggregate;

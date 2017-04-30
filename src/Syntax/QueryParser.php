@@ -35,10 +35,6 @@ class QueryParser extends Parser
                     $this->peek();
                     break;
 
-                case 'T_BRACKET_START':
-                    end($this->_parseTree)->setWhereStats($this->parseWhereClause());
-                    break;
-
                 default:
                     throw new ParserSyntaxException(
                         "In parse => Unexpected token: " . $curToken['match'],
@@ -122,8 +118,12 @@ class QueryParser extends Parser
                     $this->peek();
                     break;
 
-                default:
-                    return $model;
+                case 'T_BRACKET_START':
+                    $model->setWhereStats($this->parseWhereClause());
+                    break;
+
+                // default:
+                //     return $model;
             }
         }
 
@@ -150,7 +150,8 @@ class QueryParser extends Parser
                     // If next token is T_BLOCK_START, look ahead and parse it as a model
                     if(
                         $this->nextToken()['token'] === 'T_BLOCK_START' ||
-                        $this->nextToken()['token'] === 'T_PARENTHES_START'
+                        $this->nextToken()['token'] === 'T_PARENTHES_START' ||
+                        $this->nextToken()['token'] === 'T_BRACKET_START'
                     ) { array_push($fields, $this->parseModel()); }
 
                     // if not, parse it as a normal field
