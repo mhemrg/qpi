@@ -42,8 +42,8 @@ class QueryCtrl extends Controller
         foreach ($models as $modelAlias => $model) {
             array_push($info, [
                 'name' => $modelAlias,
-                'props' => $model::$qpiProps,
-                'relations' => $model::$qpiRelations
+                'props' => property_exists($model, 'qpiProps') ? $model::$qpiProps : [],
+                'relations' => property_exists($model, 'qpiRelations') ? $model::$qpiRelations : []
             ]);
         }
 
