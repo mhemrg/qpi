@@ -122,8 +122,8 @@ class QueryParser extends Parser
                     $model->setWhereStats($this->parseWhereClause());
                     break;
 
-                // default:
-                //     return $model;
+                default:
+                    return $model;
             }
         }
 
@@ -283,7 +283,9 @@ class QueryParser extends Parser
                 case 'T_DIGIT':
                 case 'T_STRING_SINGLEQ':
                 case 'T_STRING_DOUBLEQ':
-                    end($whereStats)->val = $curToken['match'];
+                case 'T_NULL':
+                    end($whereStats)->val =
+                        $curToken['match'] === 'null' ? null : $curToken['match'];
                     $this->peek();
                     break;
 

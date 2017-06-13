@@ -20,6 +20,7 @@ class Lexer
         "/^(\))/" => "T_PARENTHES_END",
 
         "/^(\d+)/" => "T_DIGIT",
+        "/^((null|NULL))/" => "T_NULL",
         "/^(\w+)/" => "T_IDENTIFIER",
 
         "/^(\{)/" => "T_BLOCK_START",
