@@ -185,3 +185,21 @@ With a single request, you can fetch all of your needs. Just put your queries in
 }
 ```
 Above, you see two different queries but you can fetch it with a single request.
+
+# Schema
+Your users can make request to `/schema` to see the schema of models. In order to do that, your models should have two optional static properties `$qpiProps` and `$qpiRelations`.
+```php
+class Product extends Model {
+    public static $qpiProps = [
+        'id' => 'The id',
+        'name' => 'The name of the product',
+        ...
+    ];
+
+    public static $qpiRelations = [
+        'tags' => 'Related tags of product',
+        ...
+    ];
+    
+    ...
+```
