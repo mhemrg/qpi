@@ -1,10 +1,9 @@
 # Qpi
-------------------------------------------
 Qpi is a query language for APIs and a runtime for fulfilling those queries with your existing data. Qpi provides a complete and understandable description of the data in your API, gives clients the power to ask for exactly what they need and nothing more, makes it easier to evolve APIs over time.
 
-## An import tip
--------------------------------
+>>>
 First of all, you should know that Qpi is an idea and you can implement it in your own language. This project is just a Qpi implementation for Laravel.
+>>>
 
 ## How to install
 Like any other Laravel package, you can install it with Composer. Remember it's a private package and you have some more steps to install.
@@ -47,7 +46,6 @@ Navac\Qpi\QpiServiceProvider::class
 **6) Finally, update autoload with `composer dumpautoload` command**
 
 ## Configuration
-------------------------------
 First, you need to publish configuration file.
 ```
 php artisan vendor:publish
@@ -55,11 +53,9 @@ php artisan vendor:publish
 The configuration file is copied to `config/qpi.php`.
 
 ## Registering models
-----------------------------------------
 In order to giving access to your users to make queries, you have to register your models in `config/qpi.php`.
 
 ## Usage
-----------------------------------------
 This package will introduce two new routes to your app. `/query/{query}` and `/schema`.
 
 If you want to make a query, just use the first endpoint like this:
@@ -69,7 +65,6 @@ If you want to make a query, just use the first endpoint like this:
 And if you want to see the manual of your models, use the second endpoint: `/schema`.
 
 ## The Query Language
----------------------------------------
 Now, you just need to know how to use it. As I said, it's query language and you have to need to learn it to make your queries. It's a simple language with few tips. Please follow the next steps.
 
 So let's start.
@@ -146,15 +141,17 @@ I used above syntax to tell Qpi that I want to limit results to just 5 records. 
 ```
 You have to use brackets in order to write your where statements.
 *Operators:*
-| Operator     | Name        | Example  |
-|--------------|-------------|----------|
-| =            | Equal        | id=5 |
-| >            | Greater than | id>2 |
-| <            | Less than    | id<6 |
-| !            | Not equal    | id!6 |
-| ~            | Like         | name~'john%' |
+
+| Operator     | Name         | Example        |
+|--------------|--------------|----------------|
+| =            | Equal        | id=5           |
+| >            | Greater than | id>2           |
+| <            | Less than    | id<6           |
+| !            | Not equal    | id!6           |
+| ~            | Like         | name~'john%'   |
 | &#124;       | OR           | id<6&#124;id>3 |
-| &            | AND          | id=6&id=3 |
+| &            | AND          | id=6&id=3      |
+
 
 **Order by:**
 ```
