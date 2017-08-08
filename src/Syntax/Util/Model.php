@@ -30,6 +30,8 @@ class Model
      */
     public $isInGroupBy = false;
 
+    public $withTrashed = false;
+
     public function __construct($name)
     {
         $this->_name = $name;
@@ -54,6 +56,11 @@ class Model
 
     public function getName() : string
     {
+        if(substr($this->_name, -11) === 'WithTrashed') {
+            $this->withTrashed = true;
+            return substr($this->_name, 0, strlen($this->_name) - 11);
+        }
+
         return $this->_name;
     }
 
@@ -87,6 +94,7 @@ class Model
 
     protected function _isResourceExists() : bool
     {
+
         return array_key_exists($this->getName(), QueryCtrl::$userModels);
     }
 
@@ -207,6 +215,10 @@ class Model
         $query = $relation->_addGroupBy($query);
         $query = $relation->_addOrderBy($query);
 
+        if($relation->withTrashed === true) {
+            $query->withTrashed();
+        }
+
         $relationCols = $relation->filterModelCols();
 
         $rows = $this->_sendToPipeLine(
@@ -294,7 +306,7 @@ class Model
 
                 // Map through relations and get their name as a field
                 array_map(function ($field) {
-                    return $field->_name;
+                    return $field->getName();
                 }, $model->filterRelations())
             ));
         });
@@ -331,6 +343,10 @@ class Model
             $query = $this->_addLimits($query, $this);
             $query = $this->_addGroupBy($query);
             $query = $this->_addOrderBy($query);
+            
+            if($this->withTrashed === true) {
+                $query->withTrashed();
+            }
 
             $rows = $this->_sendToPipeLine($this->getName(), $query->get());
 
