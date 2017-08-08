@@ -32,6 +32,8 @@ class Model
 
     public $withTrashed = false;
 
+    public $resultCount = 0;
+
     public function __construct($name)
     {
         $this->_name = $name;
@@ -111,11 +113,11 @@ class Model
         return QueryCtrl::$userModels[$this->getName()];
     }
 
-    protected function _respondeOk($result)
+    protected function _respondeOk($result, $model)
     {
         return [
             'ok' => true,
-            'count' => count($result),
+            'count' => $model->resultCount,
             'result' => $result
         ];
     }
@@ -219,6 +221,8 @@ class Model
             $query->withTrashed();
         }
 
+        $relation->resultCount = $query->count(); // $query->count()
+
         $relationCols = $relation->filterModelCols();
 
         $rows = $this->_sendToPipeLine(
@@ -233,7 +237,7 @@ class Model
             $rows = $rows->$aggregate($relationCols[0]);
         }
 
-        $row[$relationName] = $this->_respondeOk($rows);
+        $row[$relationName] = $this->_respondeOk($rows, $relation);
 
         return $this->_fetchRelations(
             $row[$relationName]['result'],
@@ -348,6 +352,8 @@ class Model
                 $query->withTrashed();
             }
 
+            $this->resultCount = $query->count();
+
             $rows = $this->_sendToPipeLine($this->getName(), $query->get());
 
             $rows = $this->_fetchRelations(
@@ -362,7 +368,7 @@ class Model
                 $rows = $rows->$aggregate($this->getFields()[0]);
             }
 
-            return $this->_respondeOk($rows);
+            return $this->_respondeOk($rows, $this);
         }
         catch (\BadMethodCallException $e) {
             return $this->_respondError($e->getMessage());
