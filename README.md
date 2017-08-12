@@ -1,15 +1,15 @@
-# Qpi
+# Qpi on Lumen
 Qpi is a query language for APIs and a runtime for fulfilling those queries with your existing data. Qpi provides a complete and understandable description of the data in your API, gives clients the power to ask for exactly what they need and nothing more, makes it easier to evolve APIs over time.
 
 >>>
 First of all, you should know that Qpi is an idea and you can implement it in your own language. This project is just a Qpi implementation for Laravel.
 >>>
 
-## How to install
+## How to install on Lumen
 Like any other Laravel package, you can install it with Composer. Remember it's a private package and you have some more steps to install.
 
 **1) Add this part to `composer.json`:**
-```
+```json
 "repositories": [
     {
         "type": "git",
@@ -18,7 +18,7 @@ Like any other Laravel package, you can install it with Composer. Remember it's 
 ]
 ```
 **2) `config` section of `composer.json` must be like this:**
-```
+```json
 "config": {
     "preferred-install": "dist",
     "sort-packages": true,
@@ -26,7 +26,7 @@ Like any other Laravel package, you can install it with Composer. Remember it's 
 }
 ```
 **3) Require it:**
-```
+```json
 "require": {
     "php": ">=5.6.4",
     "laravel/framework": "5.3.*",
@@ -37,20 +37,24 @@ Like any other Laravel package, you can install it with Composer. Remember it's 
 **4) Update your composer with `composer update` command**
 
 **5) Add to providers**
-After you have installed Qpi, open your Laravel config file `config/app.php` and add the following lines.
+After you have installed Qpi, open your Lumen config file `bootstrap/app.php` and add the following lines.
 
 In the `$providers` array add the service provider for this package.
-```
-Navac\Qpi\QpiServiceProvider::class
+```php
+$app->register(Navac\Qpi\QpiServiceProvider::class);
 ```
 **6) Finally, update autoload with `composer dumpautoload` command**
 
 ## Configuration
-First, you need to publish configuration file.
+Now you need to publish configuration file. Create `config/qpi.php` and then put to it:
+```php
+<?php
+return [
+    'models' => [
+        'category' => \App\Category::class,
+    ],
+];
 ```
-php artisan vendor:publish
-```
-The configuration file is copied to `config/qpi.php`.
 
 ## Registering models
 In order to giving access to your users to make queries, you have to register your models in `config/qpi.php`.

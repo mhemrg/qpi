@@ -18,19 +18,14 @@ class QueryCtrl extends Controller
         self::$userModels = config('qpi.models');
 
         try {
-            $tokens = Lexer::run($query);
+            $tokens = Lexer::run(urldecode($query));
             $parseTree = (new QueryParser($tokens))->parse();
             $result = Evaluator::eval($parseTree);
 
             return $result;
 
         } catch (ParserSyntaxException $e) {
-            return view('qpi::syntax_error', [
-                'source'  => $query,
-                'message' => $e->getMessage(),
-                'row' => $e->debug['row'],
-                'col' => $e->debug['col']
-            ]);
+            return $e->getMessage();
         }
     }
 
