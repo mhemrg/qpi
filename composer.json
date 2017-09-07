@@ -1,6 +1,7 @@
 {
-    "name": "navac/qpi",
+    "name": "qpi/laravel",
     "type": "library",
+    "description": "A query language for fetching data",
     "authors": [
         {
             "name": "MheMrg",
