@@ -5,45 +5,24 @@ Qpi is a query language for APIs and a runtime for fulfilling those queries with
 First of all, you should know that Qpi is an idea and you can implement it in your own language. This project is just a Qpi implementation for Laravel.
 >>>
 
-## How to install
+## Usage
 Like any other Laravel package, you can install it with Composer. Remember it's a private package and you have some more steps to install.
 
-**1) Add this part to `composer.json`:**
-```
-"repositories": [
-    {
-        "type": "git",
-        "url": "git@gitlab.com:mhemrg/qpi.git"
-    }
-]
-```
-**2) `config` section of `composer.json` must be like this:**
-```
-"config": {
-    "preferred-install": "dist",
-    "sort-packages": true,
-    "secure-http": false
-}
-```
-**3) Require it:**
-```
-"require": {
-    "php": ">=5.6.4",
-    "laravel/framework": "5.3.*",
-    ...
-    "navac/qpi": "dev-master"
-},
-```
-**4) Update your composer with `composer update` command**
+**1) Install it:**
 
-**5) Add to providers**
-After you have installed Qpi, open your Laravel config file `config/app.php` and add the following lines.
+```
+composer require qpi/laravel
+```
+
+**2) Add to providers**
+Open your Laravel config file `config/app.php` and add the following lines.
 
 In the `$providers` array add the service provider for this package.
 ```
 Navac\Qpi\QpiServiceProvider::class
 ```
-**6) Finally, update autoload with `composer dumpautoload` command**
+
+**3) Finally, update autoload with `composer dumpautoload` command**
 
 ## Configuration
 First, you need to publish configuration file.
@@ -55,7 +34,7 @@ The configuration file is copied to `config/qpi.php`.
 ## Registering models
 In order to giving access to your users to make queries, you have to register your models in `config/qpi.php`.
 
-## Usage
+## Quick Tutorial
 This package will introduce two new routes to your app. `/query/{query}` and `/schema`.
 
 If you want to make a query, just use the first endpoint like this:
