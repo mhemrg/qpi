@@ -165,6 +165,23 @@ With a single request, you can fetch all of your needs. Just put your queries in
 ```
 Above, you see two different queries but you can fetch it with a single request.
 
+## Authorization
+To enable authorization for models, you should add `qpiAccess` method to each model. Qpi will call this method in each request that want's to have access to that model and if the model throws an error, Qpi will reject the request.
+
+```php
+class Product extends Model {
+
+    public function qpiAccess() {
+        if(request()->header('Authorization') != 'the valid token') {
+            throw new \Exception('Authorization failed.');
+        }
+    }
+
+}
+```
+
+Note that Qpi will inject dependencies to this method.
+
 # Schema
 Your users can make request to `/schema` to see the schema of models. In order to do that, your models should have two optional static properties `$qpiProps` and `$qpiRelations`.
 ```php

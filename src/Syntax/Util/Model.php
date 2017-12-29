@@ -338,9 +338,10 @@ class Model
 
         $this->_makeInstance();
 
-
         try {
-            // $this->_modelInstance->qpiAccess();
+            if(method_exists($this->_modelInstance, 'qpiAccess')) {
+                \App::call([$this->_modelInstance, 'qpiAccess']);
+            }
 
             $query = $this->_modelInstance;
             $query = $this->_addWhereClause($query);
