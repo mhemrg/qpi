@@ -199,6 +199,3 @@ class Product extends Model {
     
     ...
 ```
-
-## Developer guide
-[Wiki](https://gitlab.com/mhemrg/qpi/wikis/home)
